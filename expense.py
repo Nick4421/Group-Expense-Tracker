@@ -8,3 +8,4 @@ class expense:
         print(self.payer + " Payed.")
         print("$" + str(self.amount) + " is the amount.")
         print(", ".join(self.payees) + " are in debt.")
+        print()
