@@ -4,11 +4,11 @@ from member import member as mem
 from member import get_indebt_owedmoney
 
 # payer, payees, amount
-# expenses = [exp("Nick", ["Frank", "Henry"], 50), exp("Frank", ["Nick"], 10)]
-# members = [mem("Nick", 28.85), mem("Porter", -24.39),
-#            mem("Sashwat", 18.77), mem("Leif", -23.23)]
-expenses = []
-members = []
+expenses = [exp("Nick", ["Nick", "Porter", "Sashwat", "Leif"],
+                49.60), exp("Nick", ["Nick", "Sashwat", "Leif"], 32.48), exp("Sashwat", ["Nick", "Sashwat", "Leif"], 72), exp("Leif", ["Nick", "Sashwat", "Leif", "Porter"], 18), exp("Leif", ["Leif", "Porter"], 12)]
+members = [mem("Nick"), mem("Porter"), mem("Sashwat"), mem("Leif")]
+# expenses = []
+# members = []
 
 
 # Returns an array of member objects
@@ -155,6 +155,7 @@ def distribute_expenses(members, expenses):
     for exp in expenses:
         num_payees = len(exp.payees)
         amount_per_person = exp.amount / num_payees
+
         # Round down to 2 decimal places
         amount_per_person *= 100
         amount_per_person //= 1
@@ -174,17 +175,32 @@ def distribute_expenses(members, expenses):
         # Compensate for any rounding errors
         curr_payee_index = 0
         while exp.amount != payee_total:
-            # Add one cent to different payees until the rounding error is gone
-            # Since we always round down, any error will always be less than the final amount
-            curr_payee = exp.payees[curr_payee_index]
-            members[find_member_from_name(curr_payee, members)].balance += 0.01
-            curr_payee_index += 1
+            if exp.amount < payee_total:
+                curr_payee = exp.payees[curr_payee_index]
+                members[find_member_from_name(
+                    curr_payee, members)].balance -= 0.01
+                curr_payee_index += 1
+                payee_total -= 0.01
+            elif exp.amount > payee_total:
+                curr_payee = exp.payees[curr_payee_index]
+                members[find_member_from_name(
+                    curr_payee, members)].balance += 0.01
+                curr_payee_index += 1
+                payee_total += 0.01
+
+    # floor any erronious error
+    for m in members:
+        m.balance = round(m.balance, 2)
+
     return members
 
 
-members = get_members()
-expenses = run_main_input_loop(members, expenses)
+# members = get_members()
+# expenses = run_main_input_loop(members, expenses)
 members = distribute_expenses(members, expenses)
+for x in members:
+    print(x.name, x.balance)
+print()
 
 # Both arrays have member objects in them (member.name, member.balance)
 in_debt, owed_money = get_indebt_owedmoney(members)
