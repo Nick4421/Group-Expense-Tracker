@@ -11,6 +11,18 @@ members = [mem("Nick"), mem("Porter"), mem("Sashwat"), mem("Leif")]
 # members = []
 
 
+# Returns the index in the members array that the person with the given name is in
+# Raises an error if name not found
+def find_member_from_name(name, members):
+    count = 0
+    for mem in members:
+        if mem.name == name:
+            return count
+        else:
+            count += 1
+    raise Exception("member name not found")
+
+
 # Returns an array of member objects
 def get_members():
     all_members = []
@@ -30,8 +42,39 @@ def get_members():
     return all_members
 
 
+# Splits expense, returns members array with updated balances
+def split_expense(members, payees, expense_amount):
+    num_payees = len(payees)
+
+    # Convert expense to cents
+    expense_cents = int(expense_amount * 100)
+
+    # Calculate amount per payee in cents
+    amount_per_payee_cents = expense_cents // num_payees
+
+    # Calculate the remaining balance in cents
+    remaining_balance_cents = expense_cents - \
+        (amount_per_payee_cents * num_payees)
+
+    # Distribute remaining balance evenly
+    payees_amounts = [amount_per_payee_cents / 100] * num_payees
+
+    for i in range(remaining_balance_cents):
+        payees_amounts[i] += 0.01
+        payees_amounts[i] = round(payees_amounts[i], 2)
+
+    iterator = 0
+    for p in payees:
+        members[find_member_from_name(
+            p, members)].balance -= payees_amounts[iterator]
+        iterator += 1
+
+    return members
+
+
 # Returns an array of expense objects
 def add_expense(members, expenses):
+    # Get who paid
     who_paid = "UNINITIALIZED"
     for member in members:
         who_paid = input("Did " + member.name +
@@ -40,6 +83,7 @@ def add_expense(members, expenses):
             who_paid = member.name
             break
 
+    # Get amount
     while True:
         try:
             amount = float(input("How much was the expense? "))
@@ -49,6 +93,7 @@ def add_expense(members, expenses):
         except ValueError:
             print("Invalid input")
 
+    # Get people who need to pay
     payees = []
     for member in members:
         needs_to_pay = input("Does " + member.name + " need to pay? (y or n) ")
@@ -63,6 +108,9 @@ def add_expense(members, expenses):
     if not payees:
         # No payees added
         payees.append("UNINITIALIZED")
+
+    # Split balance evenly amongst payees
+    split_expense(members, payees, amount)
 
     expense = exp(who_paid, payees, amount)
     expenses.append(expense)
@@ -137,74 +185,44 @@ def run_main_input_loop(members, expenses):
     return expenses
 
 
-# Returns the index in the members array that the person with the given name is in
-# Raises an error if name not found
-def find_member_from_name(name, members):
-    count = 0
-    for mem in members:
-        if mem.name == name:
-            return count
-        else:
-            count += 1
-    raise Exception("member name not found")
-
-
-# Distributes expenses evenly across payees
-# Returns a members array with updated balances
-def distribute_expenses(members, expenses):
-    for exp in expenses:
-        num_payees = len(exp.payees)
-        amount_per_person = exp.amount / num_payees
-
-        # Round down to 2 decimal places
-        amount_per_person *= 100
-        amount_per_person //= 1
-        amount_per_person /= 100
-
-        # Add expense amount to the payers balance
-        payer_index = find_member_from_name(exp.payer, members)
-        members[payer_index].balance += exp.amount
-
-        # Remove equal amounts from payees balances
-        payee_total = 0
-        for payee in exp.payees:
-            payee_index = find_member_from_name(payee, members)
-            members[payee_index].balance -= amount_per_person
-            payee_total += amount_per_person
-
-        # Compensate for any rounding errors
-        curr_payee_index = 0
-        while exp.amount != payee_total:
-            if exp.amount < payee_total:
-                curr_payee = exp.payees[curr_payee_index]
-                members[find_member_from_name(
-                    curr_payee, members)].balance -= 0.01
-                curr_payee_index += 1
-                payee_total -= 0.01
-            elif exp.amount > payee_total:
-                curr_payee = exp.payees[curr_payee_index]
-                members[find_member_from_name(
-                    curr_payee, members)].balance += 0.01
-                curr_payee_index += 1
-                payee_total += 0.01
-
-    # floor any erronious error
-    for m in members:
-        m.balance = round(m.balance, 2)
-
-    return members
-
-
 # members = get_members()
-# expenses = run_main_input_loop(members, expenses)
-members = distribute_expenses(members, expenses)
+expenses = run_main_input_loop(members, expenses)
+# members = distribute_expenses(members, expenses)
 for x in members:
     print(x.name, x.balance)
 print()
-
 # Both arrays have member objects in them (member.name, member.balance)
 in_debt, owed_money = get_indebt_owedmoney(members)
 reimbursements = get_reimbursements()
 
 for i in reimbursements:
     print(i.in_debt + " owes " + i.owed_money + " $" + str(i.amount))
+
+###########################################
+
+
+# def split_bill(expense, num_payees):
+#     # Convert expense to cents
+#     expense_cents = int(expense * 100)
+
+#     # Calculate amount per payee in cents
+#     amount_per_payee_cents = expense_cents // num_payees
+
+#     # Calculate the remaining balance in cents
+#     remaining_balance_cents = expense_cents - \
+#         (amount_per_payee_cents * num_payees)
+
+#     # Distribute remaining balance evenly
+#     payees = [amount_per_payee_cents / 100] * num_payees
+
+#     for i in range(remaining_balance_cents):
+#         payees[i] += 0.01
+#         payees[i] = round(payees[i], 2)
+
+#     return payees
+
+
+# test = split_bill(10, 3)
+
+# for p in test:
+#     print(p)
