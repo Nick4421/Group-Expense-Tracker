@@ -1,5 +1,6 @@
 class expense:
-    def __init__(self, payer, payees, amount):
+    def __init__(self, expense_name, payer, payees, amount):
+        self.expense_name = expense_name
         self.payer = payer
         self.payees = payees
         self.amount = amount

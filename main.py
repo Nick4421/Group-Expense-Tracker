@@ -4,8 +4,11 @@ from member import member as mem
 from member import get_indebt_owedmoney
 
 # payer, payees, amount
-expenses = [exp("Nick", ["Nick", "Porter", "Sashwat", "Leif"],
-                49.60), exp("Nick", ["Nick", "Sashwat", "Leif"], 32.48), exp("Sashwat", ["Nick", "Sashwat", "Leif"], 72), exp("Leif", ["Nick", "Sashwat", "Leif", "Porter"], 18), exp("Leif", ["Leif", "Porter"], 12)]
+expenses = [exp("exp 1", "Nick", ["Nick", "Porter", "Sashwat", "Leif"], 49.60),
+            exp("exp 2", "Nick", ["Nick", "Sashwat", "Leif"], 32.48),
+            exp("exp 3", "Sashwat", ["Nick", "Sashwat", "Leif"], 72),
+            exp("exp 4", "Leif", ["Nick", "Sashwat", "Leif", "Porter"], 18),
+            exp("exp 5", "Leif", ["Leif", "Porter"], 12)]
 members = [mem("Nick"), mem("Porter"), mem("Sashwat"), mem("Leif")]
 # expenses = []
 # members = []
@@ -112,7 +115,7 @@ def add_expense(members, expenses):
     # Split balance evenly amongst payees
     split_expense(members, payees, amount)
 
-    expense = exp(who_paid, payees, amount)
+    expense = exp("Expense Name", who_paid, payees, amount)
     expenses.append(expense)
     return expenses
 

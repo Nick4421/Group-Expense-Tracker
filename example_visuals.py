@@ -1,39 +1,43 @@
 import PySimpleGUI as sg
 
-# ----------- Create the 3 layouts this Window will display -----------
-layout1 = [[sg.Text('Enter your name and email address to register')],
-           [sg.Text('Name: '), sg.Input(key='-NAME-')],
-           [sg.Text('Email Address: '), sg.Input(key='-EMAIL_ADDRESS-')]]
+# Sample data for the list of names (you may replace this with your actual data)
+names = ['John', 'Alice', 'Bob', 'Eve']
 
-layout2 = [[sg.Text('Enter your vote:')],
-           [sg.Radio('Trump', 'vote')],
-           [sg.Radio('Biden', 'vote')]]
+# Define the layout
+layout = [
+    [sg.Text('Expense Name:', size=(12, 1)),
+     sg.Input(key='-EXPENSE-', size=(20, 1))],
+    [sg.Text('Amount:', size=(12, 1)), sg.Input(key='-AMOUNT-', size=(20, 1))],
+    [sg.Text('Select Names:', size=(12, 1)),
+     sg.Column([
+         [sg.Checkbox(name, key=f'-CHECKBOX-{name}-')] for name in names
+     ])],
+    [sg.Button('Submit'), sg.Button('Cancel')]
+]
 
-layout3 = [[sg.Text('Thanks for voting!')]]
+# Create the window
+window = sg.Window('Expense Tracker', layout)
 
-# ----------- Create actual layout using Columns and a row of Buttons
-layout = [[sg.Column(layout1, key='-COL1-'),
-           sg.Column(layout2, visible=False, key='-COL2-'),
-           sg.Column(layout3, visible=False, key='-COL3-')],
-          [sg.Button('Next'), sg.Button('Return to Start'), sg.Button('Exit')]]
-
-window = sg.Window('Dynamic Window', layout)
-
-layout = 1  # The currently visible layout
+# Event loop
 while True:
     event, values = window.read()  # type: ignore
-    if event in (None, 'Exit'):
+    if event == sg.WINDOW_CLOSED or event == 'Cancel':
         break
-    if event == 'Next':
-        print(layout)
-        window[f'-COL{layout}-'].update(visible=False)
-        if layout < 3:
-            layout += 1
-            window[f'-COL{layout}-'].update(visible=True)
-        else:
-            window[f'-COL3-'].update(visible=True)
-    elif event == 'Return to Start':
-        window[f'-COL{layout}-'].update(visible=False)
-        window[f'-COL1-'].update(visible=True)
-        layout = 1
+    elif event == 'Submit':
+        # Get the entered expense name and amount
+        expense_name = values['-EXPENSE-']
+        amount = values['-AMOUNT-']
+
+        # Get the selected names from checkboxes
+        selected_names = [
+            name for name in names if values[f'-CHECKBOX-{name}-']]
+
+        # Process the entered data (you can add your logic here)
+
+        # Print the entered data for demonstration purposes
+        print(f'Expense Name: {expense_name}')
+        print(f'Amount: {amount}')
+        print(f'Selected Names: {selected_names}')
+
+# Close the window
 window.close()
