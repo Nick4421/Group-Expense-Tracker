@@ -1,24 +1,22 @@
+import PySimpleGUI as sg
+
 from expense import expense as exp
-from reimbursement import reimbursement
 from member import member as mem
-from member import get_indebt_owedmoney
-
-# payer, payees, amount
-expenses = [exp("exp 1", "Nick", ["Nick", "Porter", "Sashwat", "Leif"], 49.60),
-            exp("exp 2", "Nick", ["Nick", "Sashwat", "Leif"], 32.48),
-            exp("exp 3", "Sashwat", ["Nick", "Sashwat", "Leif"], 72),
-            exp("exp 4", "Leif", ["Nick", "Sashwat", "Leif", "Porter"], 18),
-            exp("exp 5", "Leif", ["Leif", "Porter"], 12)]
-members = [mem("Nick"), mem("Porter"), mem("Sashwat"), mem("Leif")]
-# expenses = []
-# members = []
+from reimbursement import reimbursement as rm
 
 
-# Returns the index in the members array that the person with the given name is in
-# Raises an error if name not found
+def is_valid_amount(amount_str):
+    try:
+        float(amount_str)
+        return True
+    except ValueError:
+        return False
+
+
 def find_member_from_name(name, members):
     count = 0
     for mem in members:
+        # print(mem.name, name)
         if mem.name == name:
             return count
         else:
@@ -26,36 +24,38 @@ def find_member_from_name(name, members):
     raise Exception("member name not found")
 
 
-# Returns an array of member objects
-def get_members():
-    all_members = []
-    print("Who is in this group? (Enter one name at a time, enter 'q' to stop)")
-    while True:
-        name = input()
-        if name == "q":
-            if not all_members:
-                # Empty array
-                print("Must enter at least one name")
-            else:
-                break
-        else:
-            member = mem(name)
-            all_members.append(member)
+expenses = [exp("exp 1", "Nick", ["Nick", "Porter", "Sashwat", "Leif"], 49.60),
+            exp("exp 2", "Nick", ["Nick", "Sashwat", "Leif"], 32.48),
+            exp("exp 3", "Sashwat", ["Nick", "Sashwat", "Leif"], 72),
+            exp("exp 4", "Leif", ["Nick", "Sashwat", "Leif", "Porter"], 18),
+            exp("exp 5", "Leif", ["Leif", "Porter"], 12)]
+members = [mem("Nick"), mem("Porter"), mem("Sashwat"), mem("Leif")]
 
-    return all_members
+# Sample data for the list
+list_data = ['Item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5']
+table_header = ['Expense Name', 'Payer', 'Amount']
 
 
-# Splits expense, returns members array with updated balances
-def split_expense(members, payees, expense_amount):
-    num_payees = len(payees)
+def generate_table_rows(expenses):
+    exp_list = [
+        [exp.expense_name, exp.payer, exp.amount] for exp in expenses
+    ]
 
-    # Convert expense to cents
-    expense_cents = int(expense_amount * 100)
+    return exp_list
 
-    # Calculate amount per payee in cents
+
+# Returns members array with updated balances
+def distribute_expense(expense, members):
+    # Update payer balance
+    payer_index = find_member_from_name(name=expense.payer, members=members)
+    members[payer_index].balance += expense.amount
+
+    # Distribute expense payment amongst payees
+    expense_cents = int(round(expense.amount*100, 2))
+    num_payees = len(expense.payees)
     amount_per_payee_cents = expense_cents // num_payees
 
-    # Calculate the remaining balance in cents
+    # Remaining balance in cents
     remaining_balance_cents = expense_cents - \
         (amount_per_payee_cents * num_payees)
 
@@ -66,166 +66,119 @@ def split_expense(members, payees, expense_amount):
         payees_amounts[i] += 0.01
         payees_amounts[i] = round(payees_amounts[i], 2)
 
-    iterator = 0
-    for p in payees:
-        members[find_member_from_name(
-            p, members)].balance -= payees_amounts[iterator]
-        iterator += 1
+    payee_amount_iterator = 0
+
+    for payee_name in expense.payees:
+        member_index = find_member_from_name(payee_name, members)
+        members[member_index].balance -= payees_amounts[payee_amount_iterator]
+        payee_amount_iterator += 1
+
+    # Round each members balance just to be safe
+    for mem in members:
+        mem.balance = round(mem.balance, 2)
 
     return members
 
 
-# Returns an array of expense objects
-def add_expense(members, expenses):
-    # Get who paid
-    who_paid = "UNINITIALIZED"
-    for member in members:
-        who_paid = input("Did " + member.name +
-                         " pay for the expense? (y or n) ")
-        if who_paid == "y":
-            who_paid = member.name
-            break
+# Initialize member balances from testing data
+for exp1 in expenses:
+    members = distribute_expense(exp1, members)
 
-    # Get amount
-    while True:
-        try:
-            amount = float(input("How much was the expense? "))
-            # Round to 2 decimal places
-            amount = round(amount, 2)
-            break
-        except ValueError:
-            print("Invalid input")
+right_box_menu = [
+    [sg.Button('Add Expense', size=(15, 2))],
+    [sg.Listbox(values=list_data, size=(25, 5), enable_events=True,
+                key='-LIST2-', expand_y=True, expand_x=True, font=('Helvetica', 18))],
+    [sg.Text('Text 1', font=('Helvetica', 15)),
+     sg.Text('Text 2', font=('Helvetica', 15))]
+]
 
-    # Get people who need to pay
-    payees = []
-    for member in members:
-        needs_to_pay = input("Does " + member.name + " need to pay? (y or n) ")
-        if needs_to_pay == "y":
-            payees.append(member.name)
-        elif needs_to_pay == "n":
-            continue
+main_menu_layout = [
+    [sg.Table(headings=table_header, values=generate_table_rows(expenses),
+              justification='center', expand_x=True, expand_y=True, key='-EXPENSE_TABLE-',
+              auto_size_columns=True, display_row_numbers=False, row_height=30,
+              font=('Helvetica', 15)),
+     sg.VSeparator(),
+     sg.Column(right_box_menu, expand_y=True, expand_x=True, element_justification='center')]
+]
+
+add_expense_layout = [
+    [sg.Text('Add Expense', font=('Helvetica', 15))],
+    [sg.Text('Expense Name:', size=(12, 1)),
+     sg.Input(key='-EXPENSE_NAME-', size=(20, 1), do_not_clear=False, expand_x=True)],
+
+    # TODO
+    # change this to multiple choice with member names
+    [sg.Text('Who Paid:', size=(12, 1)),
+     sg.Input(key='-WHO_PAID-', size=(20, 1), do_not_clear=False, expand_x=True)],
+
+    [sg.Text('Amount:', size=(12, 1)),
+     sg.Input(key='-AMOUNT-', size=(20, 1), do_not_clear=False, expand_x=True)],
+
+    [sg.Text('Select Names:', size=(12, 1)),
+     sg.Column([
+         [sg.Checkbox(mem.name, key=f'-PAYEE-{mem.name}-', default=True)] for mem in members
+     ])],
+
+    [sg.Button('Submit', key='-EXPENSE_SUBMIT_BTN-'),
+     sg.Button('Cancel', key='-EXPENSE_CANCEL_BTN-')]
+]
+
+layout = [
+    [sg.Text('Group Name', font=('Helvetica', 25), expand_x=True)],
+    [sg.Column(main_menu_layout, key='-MAIN_MENU-', expand_x=True, expand_y=True),
+     sg.Column(add_expense_layout, key='-ADD_EXPENSE-', visible=False, expand_x=True, expand_y=True)]
+]
+
+# Create the resizable window
+window = sg.Window('Group Expense Tracker', layout, resizable=True)
+
+# Event loop
+while True:
+    event, values = window.read()  # type: ignore
+    if event == sg.WINDOW_CLOSED:
+        break
+    elif event == 'Add Expense':
+        window['-MAIN_MENU-'].update(visible=False)
+        window['-ADD_EXPENSE-'].update(visible=True)
+    elif event == '-EXPENSE_SUBMIT_BTN-':
+        amount_str = values['-AMOUNT-']
+        if not is_valid_amount(amount_str):
+            # Checks that amount is actually a number
+            sg.popup_error('Please enter a valid number for the amount.')
         else:
-            print("Unrecognized input. " + member.name +
-                  " will not be added to payees.")
+            # Get the amount for the expense
+            new_amount = round(float(values['-AMOUNT-']), 2)
 
-    if not payees:
-        # No payees added
-        payees.append("UNINITIALIZED")
+            # Get payees
+            new_payees_arr = []
+            for mem in members:
+                if values[f'-PAYEE-{mem.name}-']:
+                    new_payees_arr.append(mem.name)
 
-    # Split balance evenly amongst payees
-    split_expense(members, payees, amount)
+            # Make the new expense
+            new_expense = exp(values['-EXPENSE_NAME-'],
+                              values['-WHO_PAID-'],
+                              new_payees_arr,
+                              new_amount)
+            expenses = [new_expense] + expenses  # Add to front of array
 
-    expense = exp("Expense Name", who_paid, payees, amount)
-    expenses.append(expense)
-    return expenses
+            # Distribute expense
+            members = distribute_expense(expense=new_expense, members=members)
 
+            # update the window so new expense shows
+            window['-EXPENSE_TABLE-'].update(
+                values=generate_table_rows(expenses))
 
-# Returns an array of reimbursement objects
-def get_reimbursements():
-    in_debt_index = 0
-    owed_money_index = 0
-    reimbursements = []
-    while in_debt_index < len(in_debt) and owed_money_index < len(owed_money):
-        curr_owed_money = owed_money[owed_money_index]
-        curr_in_debt = in_debt[in_debt_index]
+            # switch all checkboxes back to checked
+            for mem in members:
+                window[f'-PAYEE-{mem.name}-'].update(True)
 
-        if abs(curr_owed_money.balance) > abs(curr_in_debt.balance):
-            # subtract in_debt.balance from owed_money.balance
-            curr_owed_money.balance += curr_in_debt.balance
-            # add reimbursement to the reimbursement array
-            rm = reimbursement(curr_owed_money.name,
-                               curr_in_debt.name, abs(curr_in_debt.balance))
-            reimbursements.append(rm)
-            # set the in_debt.balance to 0
-            curr_in_debt.balance = 0
-            # add one to the in_debt_index variable
-            in_debt_index += 1
+            # switch back to main window
+            window['-MAIN_MENU-'].update(visible=True)
+            window['-ADD_EXPENSE-'].update(visible=False)
+    elif event == '-EXPENSE_CANCEL_BTN-':
+        window['-MAIN_MENU-'].update(visible=True)
+        window['-ADD_EXPENSE-'].update(visible=False)
 
-        elif abs(curr_owed_money.balance) < abs(curr_in_debt.balance):
-            # subtract owed_money.balance from in_debt.balance
-            curr_in_debt.balance += curr_owed_money.balance
-            # add reimbursement to the reimbursement array
-            rm = reimbursement(curr_owed_money.name,
-                               curr_in_debt.name, abs(curr_owed_money.balance))
-            reimbursements.append(rm)
-            # set the owed_money.balance to 0
-            curr_owed_money.balance = 0
-            # add one to the owed_money_index variable
-            owed_money_index += 1
-
-        elif abs(curr_owed_money.balance) == abs(curr_in_debt.balance):
-            # add reimbursement to array
-            rm = reimbursement(curr_owed_money.name,
-                               curr_in_debt.name, abs(curr_owed_money.balance))
-            reimbursements.append(rm)
-            # set both balances to 0
-            curr_owed_money.balance = 0
-            curr_in_debt.balance = 0
-            # add one to both indices
-            owed_money_index += 1
-            in_debt_index += 1
-
-    for re in reimbursements:
-        # round down to 2 decimals
-        re.amount *= 100
-        re.amount //= 1
-        re.amount /= 100
-
-    return reimbursements
-
-
-# Returns the expenses array
-def run_main_input_loop(members, expenses):
-    while True:
-        choice = input("(e)xpense or (q)uit ")
-        if choice == "e" or choice == "expense":
-            expenses = add_expense(members, expenses)
-        elif choice == "q" or choice == "quit":
-            print("Quit")
-            break
-        else:
-            print("Invalid choice")
-    return expenses
-
-
-# members = get_members()
-expenses = run_main_input_loop(members, expenses)
-# members = distribute_expenses(members, expenses)
-for x in members:
-    print(x.name, x.balance)
-print()
-# Both arrays have member objects in them (member.name, member.balance)
-in_debt, owed_money = get_indebt_owedmoney(members)
-reimbursements = get_reimbursements()
-
-for i in reimbursements:
-    print(i.in_debt + " owes " + i.owed_money + " $" + str(i.amount))
-
-###########################################
-
-
-# def split_bill(expense, num_payees):
-#     # Convert expense to cents
-#     expense_cents = int(expense * 100)
-
-#     # Calculate amount per payee in cents
-#     amount_per_payee_cents = expense_cents // num_payees
-
-#     # Calculate the remaining balance in cents
-#     remaining_balance_cents = expense_cents - \
-#         (amount_per_payee_cents * num_payees)
-
-#     # Distribute remaining balance evenly
-#     payees = [amount_per_payee_cents / 100] * num_payees
-
-#     for i in range(remaining_balance_cents):
-#         payees[i] += 0.01
-#         payees[i] = round(payees[i], 2)
-
-#     return payees
-
-
-# test = split_bill(10, 3)
-
-# for p in test:
-#     print(p)
+# Close the window
+window.close()

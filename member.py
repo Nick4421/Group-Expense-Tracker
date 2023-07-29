@@ -1,7 +1,7 @@
 class member:
     def __init__(self, name):
         self.name = name
-        self.balance = 0
+        self.balance = 0.0
 
 
 def get_indebt_owedmoney(members):
