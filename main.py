@@ -15,30 +15,16 @@ def is_valid_amount(amount_str):
 
 def find_member_from_name(name, members):
     count = 0
-    for mem in members:
+    for member in members:
         # print(mem.name, name)
-        if mem.name == name:
+        if member.name == name:
             return count
         else:
             count += 1
     raise Exception("member name not found")
 
 
-expenses = [exp("exp 1", "Nick", ["Nick", "Porter", "Sashwat", "Leif"], 49.60),
-            exp("exp 2", "Nick", ["Nick", "Sashwat", "Leif"], 32.48),
-            exp("exp 3", "Sashwat", ["Nick", "Sashwat", "Leif"], 72),
-            exp("exp 4", "Leif", ["Nick", "Sashwat", "Leif", "Porter"], 18),
-            exp("exp 5", "Leif", ["Leif", "Porter"], 12)]
-members = [mem("Nick"), mem("Porter"), mem("Sashwat"), mem("Leif")]
-
-# Sample data for the list
-list_data = ['Item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5']
-expense_table_header = ['Expense Name', 'Payer', 'Amount']
-
-
 # Returns an array of reimbursement object
-# TODO large scale test this in the testing file
-# TODO put everything into a def main function so i can import the functions into the testing file
 def settle_balances(members):
     transactions = []
     positive_balances = [member for member in members if member.balance > 0]
@@ -61,14 +47,16 @@ def settle_balances(members):
 
 def generate_expense_table_rows(expenses):
     exp_list = [
-        [exp.expense_name, exp.payer, exp.amount] for exp in expenses
+        [exp.expense_name, exp.payer, f'$ {exp.amount}'] for exp in expenses
     ]
-
     return exp_list
 
 
-def generate_reimbursement_table_rows():
-    pass
+def generate_reimbursement_table_rows(reimbursements):
+    reimburse_list = [
+        [f'{r.debtor} owes {r.creditor}', f'$ {r.amount}'] for r in reimbursements
+    ]
+    return reimburse_list
 
 
 # Returns members array with updated balances
@@ -101,143 +89,160 @@ def distribute_expense(expense, members):
         payee_amount_iterator += 1
 
     # Round each members balance just to be safe
-    for mem in members:
-        mem.balance = round(mem.balance, 2)
+    for member in members:
+        member.balance = round(member.balance, 2)
 
     return members
 
 
-# Initialize member balances from testing data
-for exp1 in expenses:
-    members = distribute_expense(exp1, members)
+def main():
+    expenses = [exp("exp 1", "Nick", ["Nick", "Porter", "Sashwat", "Leif"], 49.60),
+                exp("exp 2", "Nick", ["Nick", "Sashwat", "Leif"], 32.48),
+                exp("exp 3", "Sashwat", ["Nick", "Sashwat", "Leif"], 72),
+                exp("exp 4", "Leif", [
+                    "Nick", "Sashwat", "Leif", "Porter"], 18),
+                exp("exp 5", "Leif", ["Leif", "Porter"], 12)]
+    members = [mem("Nick"), mem("Porter"), mem("Sashwat"), mem("Leif")]
 
-for mem in members:
-    print(mem.name, mem.balance)
+    # Initialize member balances from testing data
+    for exp1 in expenses:
+        members = distribute_expense(exp1, members)
 
-balances = settle_balances(members)
-for i in balances:
-    print(f'{i.in_debt} owes {i.owed_money} {i.amount}')
+    reimbursements = settle_balances(members)
 
-right_box_menu = [
-    [sg.Button('Add Expense', size=(15, 2))],
-    [sg.Listbox(values=list_data, size=(25, 5), enable_events=True,
-                key='-LIST2-', expand_y=True, expand_x=True, font=('Helvetica', 18))],
-    [sg.Text('Text 1', font=('Helvetica', 15)),
-     sg.Text('Text 2', font=('Helvetica', 15))]
-]
+    # Sample data for the list
+    list_data = ['Item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5']
+    expense_table_header = ['Expense Name', 'Payer', 'Amount']
+    reimbursement_table_header = ['Debtor / Creditor', 'Amount']
 
-main_menu_layout = [
-    [sg.Table(headings=expense_table_header, values=generate_expense_table_rows(expenses),
-              justification='center', expand_x=True, expand_y=True, key='-EXPENSE_TABLE-',
-              auto_size_columns=True, display_row_numbers=False, row_height=30,
-              font=('Helvetica', 15)),
-     sg.VSeparator(),
-     sg.Column(right_box_menu, expand_y=True, expand_x=True, element_justification='center')]
-]
+    right_box_menu = [
+        [sg.Button('Add Expense', size=(15, 2))],
+        [sg.Table(headings=reimbursement_table_header, values=generate_reimbursement_table_rows(reimbursements),
+                  justification='center', expand_x=True, expand_y=True, key='-REIMBURSEMENT_TABLE-',
+                  auto_size_columns=True, display_row_numbers=False, row_height=30,
+                  font=('Helvetica', 15))],
+        [sg.Text('Text 1', font=('Helvetica', 15)),
+         sg.Text('Text 2', font=('Helvetica', 15))]
+    ]
 
-add_expense_layout = [
-    [sg.Text('Add Expense', font=('Helvetica', 15))],
+    main_menu_layout = [
+        [sg.Table(headings=expense_table_header, values=generate_expense_table_rows(expenses),
+                  justification='center', expand_x=True, expand_y=True, key='-EXPENSE_TABLE-',
+                  auto_size_columns=True, display_row_numbers=False, row_height=30,
+                  font=('Helvetica', 15)),
+         sg.VSeparator(),
+         sg.Column(right_box_menu, expand_y=True, expand_x=True, element_justification='center')]
+    ]
 
-    # Expense name
-    [sg.Text('Expense Name:', size=(12, 1)),
-     sg.Input(key='-EXPENSE_NAME-', size=(20, 1), do_not_clear=False, expand_x=True)],
+    add_expense_layout = [
+        [sg.Text('Add Expense', font=('Helvetica', 15))],
 
-    [sg.HorizontalSeparator()],
+        # Expense name
+        [sg.Text('Expense Name:', size=(12, 1)),
+         sg.Input(key='-EXPENSE_NAME-', size=(20, 1), do_not_clear=False, expand_x=True)],
 
-    # Who paid
-    [sg.Text('Who Paid:', size=(12, 1)),
-     sg.Column([
-         [sg.Radio(mem.name, "payee-radio-group", key=f'-PAYER-RADIO-{mem.name}-')] for mem in members
-     ])],
+        [sg.HorizontalSeparator()],
 
-    [sg.HorizontalSeparator()],
+        # Who paid
+        [sg.Text('Who Paid:', size=(12, 1)),
+         sg.Column([
+             [sg.Radio(member.name, "payee-radio-group", key=f'-PAYER-RADIO-{member.name}-')] for member in members
+         ])],
 
-    # Amount
-    [sg.Text('Amount:', size=(12, 1)),
-     sg.Input(key='-AMOUNT-', size=(20, 1), do_not_clear=False, expand_x=True)],
+        [sg.HorizontalSeparator()],
 
-    [sg.HorizontalSeparator()],
+        # Amount
+        [sg.Text('Amount:', size=(12, 1)),
+         sg.Input(key='-AMOUNT-', size=(20, 1), do_not_clear=False, expand_x=True)],
 
-    # Payee selection
-    [sg.Text('Select Names:', size=(12, 1)),
-     sg.Column([
-         [sg.Checkbox(mem.name, key=f'-PAYEE-{mem.name}-', default=True)] for mem in members
-     ])],
+        [sg.HorizontalSeparator()],
 
-    [sg.HorizontalSeparator()],
+        # Payee selection
+        [sg.Text('Select Names:', size=(12, 1)),
+         sg.Column([
+             [sg.Checkbox(member.name, key=f'-PAYEE-{member.name}-', default=True)] for member in members
+         ])],
 
-    [sg.Button('Submit', key='-EXPENSE_SUBMIT_BTN-'),
-     sg.Button('Cancel', key='-EXPENSE_CANCEL_BTN-')]
-]
+        [sg.HorizontalSeparator()],
 
-layout = [
-    [sg.Text('Group Name', font=('Helvetica', 25), expand_x=True)],
-    [sg.Column(main_menu_layout, key='-MAIN_MENU-', expand_x=True, expand_y=True),
-     sg.Column(add_expense_layout, key='-ADD_EXPENSE-', visible=False, expand_x=True, expand_y=True)]
-]
+        [sg.Button('Submit', key='-EXPENSE_SUBMIT_BTN-'),
+         sg.Button('Cancel', key='-EXPENSE_CANCEL_BTN-')]
+    ]
 
-# Create the resizable window
-window = sg.Window('Group Expense Tracker', layout, resizable=True)
+    layout = [
+        [sg.Text('Group Name', font=('Helvetica', 25), expand_x=True)],
+        [sg.Column(main_menu_layout, key='-MAIN_MENU-', expand_x=True, expand_y=True),
+         sg.Column(add_expense_layout, key='-ADD_EXPENSE-', visible=False, expand_x=True, expand_y=True)]
+    ]
 
-# Event loop
-while True:
-    event, values = window.read()  # type: ignore
-    if event == sg.WINDOW_CLOSED:
-        break
-    elif event == 'Add Expense':
-        window['-MAIN_MENU-'].update(visible=False)
-        window['-ADD_EXPENSE-'].update(visible=True)
-    elif event == '-EXPENSE_SUBMIT_BTN-':
-        amount_str = values['-AMOUNT-']
+    # Create the resizable window
+    window = sg.Window('Group Expense Tracker', layout,
+                       resizable=True, size=(1000, 600))
 
-        # Get who paid
-        who_paid = None
-        for mem in members:
-            if values[f'-PAYER-RADIO-{mem.name}-']:
-                who_paid = mem.name
+    # Event loop
+    while True:
+        event, values = window.read()  # type: ignore
+        if event == sg.WINDOW_CLOSED:
+            break
+        elif event == 'Add Expense':
+            window['-MAIN_MENU-'].update(visible=False)
+            window['-ADD_EXPENSE-'].update(visible=True)
+        elif event == '-EXPENSE_SUBMIT_BTN-':
+            amount_str = values['-AMOUNT-']
 
-        if who_paid == None:
-            # Check to make sure a selection was made
-            sg.popup_error('Please select who paid for this expense.')
+            # Get who paid
+            who_paid = None
+            for member in members:
+                if values[f'-PAYER-RADIO-{member.name}-']:
+                    who_paid = member.name
 
-        elif not is_valid_amount(amount_str):
-            # Checks that amount is actually a number
-            sg.popup_error('Please enter a valid number for the amount.')
+            if who_paid == None:
+                # Check to make sure a selection was made
+                sg.popup_error('Please select who paid for this expense.')
 
-        else:
-            # Get the amount for the expense
-            new_amount = round(float(values['-AMOUNT-']), 2)
+            elif not is_valid_amount(amount_str):
+                # Checks that amount is actually a number
+                sg.popup_error('Please enter a valid number for the amount.')
 
-            # Get payees
-            new_payees_arr = []
-            for mem in members:
-                if values[f'-PAYEE-{mem.name}-']:
-                    new_payees_arr.append(mem.name)
+            else:
+                # Get the amount for the expense
+                new_amount = round(float(values['-AMOUNT-']), 2)
 
-            # Make the new expense
-            new_expense = exp(values['-EXPENSE_NAME-'],
-                              who_paid,
-                              new_payees_arr,
-                              new_amount)
-            expenses = [new_expense] + expenses  # Add to front of array
+                # Get payees
+                new_payees_arr = []
+                for member in members:
+                    if values[f'-PAYEE-{member.name}-']:
+                        new_payees_arr.append(member.name)
 
-            # Distribute expense
-            members = distribute_expense(expense=new_expense, members=members)
+                # Make the new expense
+                new_expense = exp(values['-EXPENSE_NAME-'],
+                                  who_paid,
+                                  new_payees_arr,
+                                  new_amount)
+                expenses = [new_expense] + expenses  # Add to front of array
 
-            # update the window so new expense shows
-            window['-EXPENSE_TABLE-'].update(
-                values=generate_expense_table_rows(expenses))
+                # Distribute expense
+                members = distribute_expense(
+                    expense=new_expense, members=members)
 
-            # switch all checkboxes back to checked
-            for mem in members:
-                window[f'-PAYEE-{mem.name}-'].update(True)
+                # update the window so new expense shows
+                window['-EXPENSE_TABLE-'].update(
+                    values=generate_expense_table_rows(expenses))
 
-            # switch back to main window
+                # switch all checkboxes back to checked
+                for member in members:
+                    window[f'-PAYEE-{member.name}-'].update(True)
+
+                # switch back to main window
+                window['-MAIN_MENU-'].update(visible=True)
+                window['-ADD_EXPENSE-'].update(visible=False)
+        elif event == '-EXPENSE_CANCEL_BTN-':
             window['-MAIN_MENU-'].update(visible=True)
             window['-ADD_EXPENSE-'].update(visible=False)
-    elif event == '-EXPENSE_CANCEL_BTN-':
-        window['-MAIN_MENU-'].update(visible=True)
-        window['-ADD_EXPENSE-'].update(visible=False)
 
-# Close the window
-window.close()
+    # Close the window
+    window.close()
+
+
+if __name__ == "__main__":
+    main()
