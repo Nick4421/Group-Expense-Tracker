@@ -5,6 +5,11 @@ from member import member as mem
 from reimbursement import reimbursement as rm
 
 
+def print_members(members):
+    for m in members:
+        print(m.name, m.balance)
+
+
 def is_valid_amount(amount_str):
     try:
         float(amount_str)
@@ -25,7 +30,12 @@ def find_member_from_name(name, members):
 
 
 # Returns an array of reimbursement object
-def settle_balances(members):
+def get_reimbursements(members):
+    # save the original member balances
+    previous_balances = []
+    for i in range(len(members)):
+        previous_balances.append(members[i].balance)
+
     transactions = []
     positive_balances = [member for member in members if member.balance > 0]
     negative_balances = [member for member in members if member.balance < 0]
@@ -41,6 +51,10 @@ def settle_balances(members):
                 creditor.balance -= amount_to_settle
                 if debtor.balance == 0:
                     break
+
+    # reset the original member balances
+    for i in range(len(members)):
+        members[i].balance = previous_balances[i]
 
     return transactions
 
@@ -95,6 +109,25 @@ def distribute_expense(expense, members):
     return members
 
 
+# writes all info to the init file
+def save_info_to_file(members, expenses):
+    output = open('init', 'w')
+
+    output.write("DO NOT MODIFY\n")
+    output.write("INIT FILE FOR GROUP EXPENSE TRACKER\n")
+
+    output.close()
+
+    # output = open('init', 'r')
+
+    # this = []
+    # this = output.readlines()
+    # for i in this:
+    #     print(i.strip())
+
+    # output.close()
+
+
 def main():
     expenses = [exp("exp 1", "Nick", ["Nick", "Porter", "Sashwat", "Leif"], 49.60),
                 exp("exp 2", "Nick", ["Nick", "Sashwat", "Leif"], 32.48),
@@ -107,8 +140,7 @@ def main():
     # Initialize member balances from testing data
     for exp1 in expenses:
         members = distribute_expense(exp1, members)
-
-    reimbursements = settle_balances(members)
+    reimbursements = get_reimbursements(members)
 
     # Sample data for the list
     list_data = ['Item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5']
@@ -179,6 +211,7 @@ def main():
     window = sg.Window('Group Expense Tracker', layout,
                        resizable=True, size=(1000, 600))
 
+    save_info_to_file(members=members, expenses=expenses)
     # Event loop
     while True:
         event, values = window.read()  # type: ignore
@@ -228,6 +261,11 @@ def main():
                 # update the window so new expense shows
                 window['-EXPENSE_TABLE-'].update(
                     values=generate_expense_table_rows(expenses))
+
+                # update window to show new reimbursements
+                reimbursements = get_reimbursements(members)
+                window['-REIMBURSEMENT_TABLE-'].update(
+                    values=generate_reimbursement_table_rows(reimbursements))
 
                 # switch all checkboxes back to checked
                 for member in members:

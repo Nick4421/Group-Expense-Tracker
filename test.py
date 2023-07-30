@@ -2,7 +2,7 @@ from expense import expense as exp
 from member import member as mem
 from reimbursement import reimbursement as rm
 from random import randint
-from main import distribute_expense, settle_balances
+from main import distribute_expense, get_reimbursements
 
 
 def distribute_expense_test():
