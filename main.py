@@ -33,15 +33,42 @@ members = [mem("Nick"), mem("Porter"), mem("Sashwat"), mem("Leif")]
 
 # Sample data for the list
 list_data = ['Item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5']
-table_header = ['Expense Name', 'Payer', 'Amount']
+expense_table_header = ['Expense Name', 'Payer', 'Amount']
 
 
-def generate_table_rows(expenses):
+# Returns an array of reimbursement object
+# TODO large scale test this in the testing file
+# TODO put everything into a def main function so i can import the functions into the testing file
+def settle_balances(members):
+    transactions = []
+    positive_balances = [member for member in members if member.balance > 0]
+    negative_balances = [member for member in members if member.balance < 0]
+
+    for debtor in negative_balances:
+        for creditor in positive_balances:
+            amount_to_settle = min(abs(debtor.balance), creditor.balance)
+            if amount_to_settle > 0:
+                reim = rm(creditor.name, debtor.name,
+                          round(amount_to_settle, 2))
+                transactions.append(reim)
+                debtor.balance += amount_to_settle
+                creditor.balance -= amount_to_settle
+                if debtor.balance == 0:
+                    break
+
+    return transactions
+
+
+def generate_expense_table_rows(expenses):
     exp_list = [
         [exp.expense_name, exp.payer, exp.amount] for exp in expenses
     ]
 
     return exp_list
+
+
+def generate_reimbursement_table_rows():
+    pass
 
 
 # Returns members array with updated balances
@@ -84,6 +111,13 @@ def distribute_expense(expense, members):
 for exp1 in expenses:
     members = distribute_expense(exp1, members)
 
+for mem in members:
+    print(mem.name, mem.balance)
+
+balances = settle_balances(members)
+for i in balances:
+    print(f'{i.in_debt} owes {i.owed_money} {i.amount}')
+
 right_box_menu = [
     [sg.Button('Add Expense', size=(15, 2))],
     [sg.Listbox(values=list_data, size=(25, 5), enable_events=True,
@@ -93,7 +127,7 @@ right_box_menu = [
 ]
 
 main_menu_layout = [
-    [sg.Table(headings=table_header, values=generate_table_rows(expenses),
+    [sg.Table(headings=expense_table_header, values=generate_expense_table_rows(expenses),
               justification='center', expand_x=True, expand_y=True, key='-EXPENSE_TABLE-',
               auto_size_columns=True, display_row_numbers=False, row_height=30,
               font=('Helvetica', 15)),
@@ -103,21 +137,34 @@ main_menu_layout = [
 
 add_expense_layout = [
     [sg.Text('Add Expense', font=('Helvetica', 15))],
+
+    # Expense name
     [sg.Text('Expense Name:', size=(12, 1)),
      sg.Input(key='-EXPENSE_NAME-', size=(20, 1), do_not_clear=False, expand_x=True)],
 
-    # TODO
-    # change this to multiple choice with member names
-    [sg.Text('Who Paid:', size=(12, 1)),
-     sg.Input(key='-WHO_PAID-', size=(20, 1), do_not_clear=False, expand_x=True)],
+    [sg.HorizontalSeparator()],
 
+    # Who paid
+    [sg.Text('Who Paid:', size=(12, 1)),
+     sg.Column([
+         [sg.Radio(mem.name, "payee-radio-group", key=f'-PAYER-RADIO-{mem.name}-')] for mem in members
+     ])],
+
+    [sg.HorizontalSeparator()],
+
+    # Amount
     [sg.Text('Amount:', size=(12, 1)),
      sg.Input(key='-AMOUNT-', size=(20, 1), do_not_clear=False, expand_x=True)],
 
+    [sg.HorizontalSeparator()],
+
+    # Payee selection
     [sg.Text('Select Names:', size=(12, 1)),
      sg.Column([
          [sg.Checkbox(mem.name, key=f'-PAYEE-{mem.name}-', default=True)] for mem in members
      ])],
+
+    [sg.HorizontalSeparator()],
 
     [sg.Button('Submit', key='-EXPENSE_SUBMIT_BTN-'),
      sg.Button('Cancel', key='-EXPENSE_CANCEL_BTN-')]
@@ -142,9 +189,21 @@ while True:
         window['-ADD_EXPENSE-'].update(visible=True)
     elif event == '-EXPENSE_SUBMIT_BTN-':
         amount_str = values['-AMOUNT-']
-        if not is_valid_amount(amount_str):
+
+        # Get who paid
+        who_paid = None
+        for mem in members:
+            if values[f'-PAYER-RADIO-{mem.name}-']:
+                who_paid = mem.name
+
+        if who_paid == None:
+            # Check to make sure a selection was made
+            sg.popup_error('Please select who paid for this expense.')
+
+        elif not is_valid_amount(amount_str):
             # Checks that amount is actually a number
             sg.popup_error('Please enter a valid number for the amount.')
+
         else:
             # Get the amount for the expense
             new_amount = round(float(values['-AMOUNT-']), 2)
@@ -157,7 +216,7 @@ while True:
 
             # Make the new expense
             new_expense = exp(values['-EXPENSE_NAME-'],
-                              values['-WHO_PAID-'],
+                              who_paid,
                               new_payees_arr,
                               new_amount)
             expenses = [new_expense] + expenses  # Add to front of array
@@ -167,7 +226,7 @@ while True:
 
             # update the window so new expense shows
             window['-EXPENSE_TABLE-'].update(
-                values=generate_table_rows(expenses))
+                values=generate_expense_table_rows(expenses))
 
             # switch all checkboxes back to checked
             for mem in members:
