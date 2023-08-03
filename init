@@ -1,2 +1,64 @@
-INIT FILE FOR GROUP EXPENSE TRACKER
 DO NOT MODIFY
+INIT FILE FOR GROUP EXPENSE TRACKER
+NEW MEMBER
+Nick
+True
+NEW MEMBER
+Porter
+True
+NEW MEMBER
+Sashwat
+True
+NEW MEMBER
+Leif
+True
+NEW EXPENSE
+saved expense
+Porter
+72.34
+4
+Nick
+Porter
+Sashwat
+Leif
+NEW EXPENSE
+exp 1
+Nick
+49.6
+4
+Nick
+Porter
+Sashwat
+Leif
+NEW EXPENSE
+exp 2
+Nick
+32.48
+3
+Nick
+Sashwat
+Leif
+NEW EXPENSE
+exp 3
+Sashwat
+72.0
+3
+Nick
+Sashwat
+Leif
+NEW EXPENSE
+exp 4
+Leif
+18.0
+4
+Nick
+Sashwat
+Leif
+Porter
+NEW EXPENSE
+exp 5
+Leif
+12.0
+2
+Leif
+Porter

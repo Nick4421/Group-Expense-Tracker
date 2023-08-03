@@ -10,6 +10,7 @@ def print_members(members):
         print(m.name, m.balance)
 
 
+# Returns true if amount can be converted into a decimal
 def is_valid_amount(amount_str):
     try:
         float(amount_str)
@@ -18,6 +19,7 @@ def is_valid_amount(amount_str):
         return False
 
 
+# Returns index of the member
 def find_member_from_name(name, members):
     count = 0
     for member in members:
@@ -59,6 +61,7 @@ def get_reimbursements(members):
     return transactions
 
 
+# Returns an array to go in the table function
 def generate_expense_table_rows(expenses):
     exp_list = [
         [exp.expense_name, exp.payer, f'$ {exp.amount}'] for exp in expenses
@@ -66,6 +69,7 @@ def generate_expense_table_rows(expenses):
     return exp_list
 
 
+# Returns an array to go in the table function
 def generate_reimbursement_table_rows(reimbursements):
     reimburse_list = [
         [f'{r.debtor} owes {r.creditor}', f'$ {r.amount}'] for r in reimbursements
@@ -113,33 +117,80 @@ def distribute_expense(expense, members):
 def save_info_to_file(members, expenses):
     output = open('init', 'w')
 
-    output.write("DO NOT MODIFY\n")
-    output.write("INIT FILE FOR GROUP EXPENSE TRACKER\n")
+    output.write('DO NOT MODIFY\n')
+    output.write('INIT FILE FOR GROUP EXPENSE TRACKER\n')
+
+    for member in members:
+        output.write('NEW MEMBER\n')
+        output.write(f'{member.name}\n')
+        output.write(f'{member.is_you}\n')
+
+    for expense in expenses:
+        output.write("NEW EXPENSE\n")
+        output.write(f'{expense.expense_name}\n')
+        output.write(f'{expense.payer}\n')
+        output.write(f'{expense.amount}\n')
+        output.write(f'{len(expense.payees)}\n')
+        for payee in expense.payees:
+            output.write(f'{payee}\n')
 
     output.close()
 
-    # output = open('init', 'r')
 
-    # this = []
-    # this = output.readlines()
-    # for i in this:
-    #     print(i.strip())
+# Returns members, expenses
+def read_info_from_file():
+    members = []
+    expenses = []
 
-    # output.close()
+    file = open('init', 'r')
+    line = file.readline().strip()
+
+    while line:
+        if line == 'NEW MEMBER':
+            mem_name = file.readline().strip()
+            mem_is_you = bool(file.readline().strip())
+            curr_mem = mem(name=mem_name, is_you=mem_is_you)
+            members.append(curr_mem)
+        elif line == 'NEW EXPENSE':
+            exp_payees = []
+            exp_name = file.readline().strip()
+            exp_payer = file.readline().strip()
+            exp_amount = float(file.readline().strip())
+            num_payees = int(file.readline().strip())
+            for _ in range(num_payees):
+                exp_payees.append(file.readline().strip())
+            curr_exp = exp(expense_name=exp_name,
+                           payer=exp_payer,
+                           amount=exp_amount,
+                           payees=exp_payees)
+            expenses.append(curr_exp)
+
+        line = file.readline().strip()
+
+    file.close()
+
+    # Set member balances
+    for expense in expenses:
+        members = distribute_expense(members=members, expense=expense)
+
+    # print_members(members)
+    return members, expenses
 
 
 def main():
-    expenses = [exp("exp 1", "Nick", ["Nick", "Porter", "Sashwat", "Leif"], 49.60),
-                exp("exp 2", "Nick", ["Nick", "Sashwat", "Leif"], 32.48),
-                exp("exp 3", "Sashwat", ["Nick", "Sashwat", "Leif"], 72),
-                exp("exp 4", "Leif", [
-                    "Nick", "Sashwat", "Leif", "Porter"], 18),
-                exp("exp 5", "Leif", ["Leif", "Porter"], 12)]
-    members = [mem("Nick"), mem("Porter"), mem("Sashwat"), mem("Leif")]
-
+    # expenses = [exp("exp 1", "Nick", ["Nick", "Porter", "Sashwat", "Leif"], 49.60),
+    #             exp("exp 2", "Nick", ["Nick", "Sashwat", "Leif"], 32.48),
+    #             exp("exp 3", "Sashwat", ["Nick", "Sashwat", "Leif"], 72),
+    #             exp("exp 4", "Leif", [
+    #                 "Nick", "Sashwat", "Leif", "Porter"], 18),
+    #             exp("exp 5", "Leif", ["Leif", "Porter"], 12)]
+    # members = [mem("Nick", True), mem("Porter", False),
+    #            mem("Sashwat", False), mem("Leif", False)]
     # Initialize member balances from testing data
-    for exp1 in expenses:
-        members = distribute_expense(exp1, members)
+    # for exp1 in expenses:
+    #     members = distribute_expense(exp1, members)
+
+    members, expenses = read_info_from_file()
     reimbursements = get_reimbursements(members)
 
     # Sample data for the list
@@ -148,19 +199,24 @@ def main():
     reimbursement_table_header = ['Debtor / Creditor', 'Amount']
 
     right_box_menu = [
-        [sg.Button('Add Expense', size=(15, 2))],
-        [sg.Table(headings=reimbursement_table_header, values=generate_reimbursement_table_rows(reimbursements),
-                  justification='center', expand_x=True, expand_y=True, key='-REIMBURSEMENT_TABLE-',
-                  auto_size_columns=True, display_row_numbers=False, row_height=30,
-                  font=('Helvetica', 15))],
+        [sg.Button('Add Expense', size=(15, 1.5), font=('Helvetica', 15))],
+        [sg.Table(headings=reimbursement_table_header,
+                  values=generate_reimbursement_table_rows(reimbursements),
+                  justification='center', expand_x=True, expand_y=True,
+                  key='-REIMBURSEMENT_TABLE-',
+                  auto_size_columns=True, display_row_numbers=False,
+                  row_height=30, font=('Helvetica', 15))],
         [sg.Text('Text 1', font=('Helvetica', 15)),
-         sg.Text('Text 2', font=('Helvetica', 15))]
+         sg.Text('Text 2', font=('Helvetica', 15)),
+         sg.Button('Save and Quit', size=(12, 1.25), font=('Helvetica', 13))]
     ]
 
     main_menu_layout = [
-        [sg.Table(headings=expense_table_header, values=generate_expense_table_rows(expenses),
-                  justification='center', expand_x=True, expand_y=True, key='-EXPENSE_TABLE-',
-                  auto_size_columns=True, display_row_numbers=False, row_height=30,
+        [sg.Table(headings=expense_table_header,
+                  values=generate_expense_table_rows(expenses),
+                  justification='center', expand_x=True, expand_y=True,
+                  key='-EXPENSE_TABLE-', auto_size_columns=True,
+                  display_row_numbers=False, row_height=30,
                   font=('Helvetica', 15)),
          sg.VSeparator(),
          sg.Column(right_box_menu, expand_y=True, expand_x=True, element_justification='center')]
@@ -178,7 +234,8 @@ def main():
         # Who paid
         [sg.Text('Who Paid:', size=(12, 1)),
          sg.Column([
-             [sg.Radio(member.name, "payee-radio-group", key=f'-PAYER-RADIO-{member.name}-')] for member in members
+             [sg.Radio(member.name, "payee-radio-group",
+                       key=f'-PAYER-RADIO-{member.name}-')] for member in members
          ])],
 
         [sg.HorizontalSeparator()],
@@ -192,7 +249,8 @@ def main():
         # Payee selection
         [sg.Text('Select Names:', size=(12, 1)),
          sg.Column([
-             [sg.Checkbox(member.name, key=f'-PAYEE-{member.name}-', default=True)] for member in members
+             [sg.Checkbox(member.name,
+                          key=f'-PAYEE-{member.name}-', default=True)] for member in members
          ])],
 
         [sg.HorizontalSeparator()],
@@ -211,11 +269,12 @@ def main():
     window = sg.Window('Group Expense Tracker', layout,
                        resizable=True, size=(1000, 600))
 
-    save_info_to_file(members=members, expenses=expenses)
+    # save_info_to_file(members=members, expenses=expenses)
+    # read_info_from_file()
     # Event loop
     while True:
         event, values = window.read()  # type: ignore
-        if event == sg.WINDOW_CLOSED:
+        if event == sg.WINDOW_CLOSED or event == 'Save and Quit':
             break
         elif event == 'Add Expense':
             window['-MAIN_MENU-'].update(visible=False)
@@ -280,6 +339,8 @@ def main():
 
     # Close the window
     window.close()
+
+    save_info_to_file(members=members, expenses=expenses)
 
 
 if __name__ == "__main__":
