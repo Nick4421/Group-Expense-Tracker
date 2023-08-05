@@ -20,7 +20,7 @@ def distribute_expense_test():
         curr_payees = all_payees[randint(0, 4)]
         members = []
         for name in curr_payees:
-            curr = mem(name)
+            curr = mem(name, False)
             members.append(curr)
 
         amount = round((randint(7, 10000) / 100), 2)
@@ -60,7 +60,7 @@ def settle_balances_test():
         curr_payees = all_payees[randint(0, 4)]
         members = []
         for name in curr_payees:
-            curr = mem(name)
+            curr = mem(name, False)
             members.append(curr)
 
         amount = round((randint(7, 10000) / 100), 2)
@@ -71,7 +71,7 @@ def settle_balances_test():
                            amount=amount)
 
         members = distribute_expense(expense=curr_expense, members=members)
-        reimbursements = settle_balances(members)
+        reimbursements = get_reimbursements(members)
         for r in reimbursements:
             print(f'{r.debtor} owes {r.creditor} {r.amount}')
 

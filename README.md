@@ -24,4 +24,3 @@ TODO
 - Get rid of class and just use variable attributes
 - Implement multiple different groups
 - Be able to delete expenses
-- Fix text at the bottom of the right box to have relevant info

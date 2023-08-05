@@ -10,6 +10,21 @@ def print_members(members):
         print(m.name, m.balance)
 
 
+def total_expense_amount(expenses):
+    total = 0.0
+    for expense in expenses:
+        total += expense.amount
+    return round(total, 2)
+
+
+def my_balance(members):
+    for member in members:
+        if member.is_you:
+            return round(member.balance, 2)
+
+    return 0
+
+
 # Returns true if amount can be converted into a decimal
 def is_valid_amount(amount_str):
     try:
@@ -193,6 +208,9 @@ def main():
     members, expenses = read_info_from_file()
     reimbursements = get_reimbursements(members)
 
+    print(total_expense_amount(expenses))
+    print(my_balance(members))
+
     # Sample data for the list
     list_data = ['Item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5']
     expense_table_header = ['Expense Name', 'Payer', 'Amount']
@@ -206,9 +224,12 @@ def main():
                   key='-REIMBURSEMENT_TABLE-',
                   auto_size_columns=True, display_row_numbers=False,
                   row_height=30, font=('Helvetica', 15))],
-        [sg.Text('Text 1', font=('Helvetica', 15)),
-         sg.Text('Text 2', font=('Helvetica', 15)),
-         sg.Button('Save and Quit', size=(12, 1.25), font=('Helvetica', 13))]
+        [sg.Text(f'My Balance: ${my_balance(members)}',
+                 font=('Helvetica', 15), key='-MY_BALANCE-'),
+         sg.VerticalSeparator(),
+         sg.Text(f'Total Expense Amount: ${total_expense_amount(expenses)}',
+                 font=('Helvetica', 15), key='-TOTAL_EXPENSE_AMOUNT-')],
+        [sg.Button('Save and Quit', size=(12, 1), font=('Helvetica', 13))]
     ]
 
     main_menu_layout = [
@@ -329,6 +350,13 @@ def main():
                 # switch all checkboxes back to checked
                 for member in members:
                     window[f'-PAYEE-{member.name}-'].update(True)
+
+                # update my balance and total expense balance
+                new_stuff = 'new'
+                window['-MY_BALANCE-'].update(
+                    f'My Balance: ${my_balance(members)}')  # type: ignore
+                window['-TOTAL_EXPENSE_AMOUNT-'].update(
+                    f'Total Expense Amount: ${total_expense_amount(expenses)}')  # type: ignore
 
                 # switch back to main window
                 window['-MAIN_MENU-'].update(visible=True)
