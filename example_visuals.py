@@ -1,38 +1,37 @@
 import PySimpleGUI as sg
 
-# Define the layout of the GUI
-layout = [
-    [sg.Text("Select one option:")],
-    [sg.Radio("Option 1", "radio_group", key="-OPTION1-")],
-    [sg.Radio("Option 2", "radio_group", key="-OPTION2-")],
-    [sg.Radio("Option 3", "radio_group", key="-OPTION3-")],
-    [sg.Button("Submit", key="-SUBMIT-")],
+# Example expense data
+expense_data = [
+    ['Groceries', '$50'],
+    ['Dinner', '$30'],
+    ['Gas', '$40']
 ]
 
-# Create the window
-window = sg.Window("Multiple Choice Bubbles", layout)
+layout = [
+    [sg.Text('Delete Expense', font=('Helvetica', 14), justification='center')],
+    [sg.Text('Select an expense to delete:', justification='center')],
+    [sg.Listbox(values=[f"{expense[0]} ({expense[1]})" for expense in expense_data],
+                size=(30, 5),
+                key='-EXPENSE-LIST-')],
+    [sg.Button('Delete Expense'), sg.Button('Cancel')]
+]
 
-# Event loop
+window = sg.Window('Delete Expense Popup', layout)
+
 while True:
     event, values = window.read()  # type: ignore
 
-    # Exit the loop if the window is closed
-    if event == sg.WINDOW_CLOSED:
+    if event == sg.WIN_CLOSED or event == 'Cancel':
         break
 
-    # Handle the button click event
-    if event == "-SUBMIT-":
-        # Retrieve the selected option
-        selected_option = None
-        if values["-OPTION1-"]:
-            selected_option = "Option 1"
-        elif values["-OPTION2-"]:
-            selected_option = "Option 2"
-        elif values["-OPTION3-"]:
-            selected_option = "Option 3"
+    if event == 'Delete Expense':
+        selected_expense_index = values['-EXPENSE-LIST-'][0]
+        if selected_expense_index is not None:
+            del expense_data[selected_expense_index]
+            sg.popup('Expense deleted successfully!',
+                     auto_close=True, auto_close_duration=2)
+        else:
+            sg.popup('Please select an expense to delete!',
+                     auto_close=True, auto_close_duration=2)
 
-        # Show the selected option in a popup
-        sg.popup(f"Selected Option: {selected_option}")
-
-# Close the window when the loop ends
 window.close()

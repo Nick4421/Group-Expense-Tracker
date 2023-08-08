@@ -14,15 +14,16 @@ def total_expense_amount(expenses):
     total = 0.0
     for expense in expenses:
         total += expense.amount
-    return round(total, 2)
+    total = round(total, 2)
+    return f'Total Expense Amount: ${total}'
 
 
 def my_balance(members):
     for member in members:
         if member.is_you:
-            return round(member.balance, 2)
+            return f'My Balance: ${round(member.balance, 2)}'
 
-    return 0
+    return 'Couldn\'t Find My Balance'
 
 
 # Returns true if amount can be converted into a decimal
@@ -192,6 +193,50 @@ def read_info_from_file():
     return members, expenses
 
 
+def get_expense_popup_text(expense):
+    name = expense.expense_name
+    amount = expense.amount
+    payer = expense.payer
+    payees = expense.payees
+    final_string = f''
+    final_string += f'Expense Name: {name}\n'
+    final_string += f'Amount: ${amount}\n'
+    final_string += f'Payer: {payer}\n'
+    final_string += '\n'
+    final_string += 'Payees:\n'
+    for payee in payees:
+        final_string += f'  - {payee}\n'
+    final_string += '\n'
+    final_string += 'Delete Expense?'
+    return final_string
+
+
+def update_window_new_expense(expenses, members, window):
+    # zero member balances before redistributing all expenses
+    for member in members:
+        member.balance = 0.0
+
+    # distribute expenses
+    for expense in expenses:
+        members = distribute_expense(expense=expense, members=members)
+
+    # update window to show new reimbursements
+    reimbursements = get_reimbursements(members)
+    window['-REIMBURSEMENT_TABLE-'].update(
+        values=generate_reimbursement_table_rows(reimbursements))
+
+    # update my balance and total expense balance
+    window['-MY_BALANCE-'].update(
+        my_balance(members))  # type: ignore
+    window['-TOTAL_EXPENSE_AMOUNT-'].update(
+        total_expense_amount(expenses))  # type: ignore
+
+    # update the window so new expense shows
+    # something with this line here
+    window['-EXPENSE_TABLE-'].update(
+        values=generate_expense_table_rows(expenses))
+
+
 def main():
     # expenses = [exp("exp 1", "Nick", ["Nick", "Porter", "Sashwat", "Leif"], 49.60),
     #             exp("exp 2", "Nick", ["Nick", "Sashwat", "Leif"], 32.48),
@@ -208,11 +253,6 @@ def main():
     members, expenses = read_info_from_file()
     reimbursements = get_reimbursements(members)
 
-    print(total_expense_amount(expenses))
-    print(my_balance(members))
-
-    # Sample data for the list
-    list_data = ['Item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5']
     expense_table_header = ['Expense Name', 'Payer', 'Amount']
     reimbursement_table_header = ['Debtor / Creditor', 'Amount']
 
@@ -224,10 +264,10 @@ def main():
                   key='-REIMBURSEMENT_TABLE-',
                   auto_size_columns=True, display_row_numbers=False,
                   row_height=30, font=('Helvetica', 15))],
-        [sg.Text(f'My Balance: ${my_balance(members)}',
+        [sg.Text(my_balance(members),
                  font=('Helvetica', 15), key='-MY_BALANCE-'),
          sg.VerticalSeparator(),
-         sg.Text(f'Total Expense Amount: ${total_expense_amount(expenses)}',
+         sg.Text(total_expense_amount(expenses),
                  font=('Helvetica', 15), key='-TOTAL_EXPENSE_AMOUNT-')],
         [sg.Button('Save and Quit', size=(12, 1), font=('Helvetica', 13))]
     ]
@@ -238,7 +278,7 @@ def main():
                   justification='center', expand_x=True, expand_y=True,
                   key='-EXPENSE_TABLE-', auto_size_columns=True,
                   display_row_numbers=False, row_height=30,
-                  font=('Helvetica', 15)),
+                  font=('Helvetica', 15), enable_events=True),
          sg.VSeparator(),
          sg.Column(right_box_menu, expand_y=True, expand_x=True, element_justification='center')]
     ]
@@ -290,8 +330,6 @@ def main():
     window = sg.Window('Group Expense Tracker', layout,
                        resizable=True, size=(1000, 600))
 
-    # save_info_to_file(members=members, expenses=expenses)
-    # read_info_from_file()
     # Event loop
     while True:
         event, values = window.read()  # type: ignore
@@ -334,29 +372,12 @@ def main():
                                   new_amount)
                 expenses = [new_expense] + expenses  # Add to front of array
 
-                # Distribute expense
-                members = distribute_expense(
-                    expense=new_expense, members=members)
-
-                # update the window so new expense shows
-                window['-EXPENSE_TABLE-'].update(
-                    values=generate_expense_table_rows(expenses))
-
-                # update window to show new reimbursements
-                reimbursements = get_reimbursements(members)
-                window['-REIMBURSEMENT_TABLE-'].update(
-                    values=generate_reimbursement_table_rows(reimbursements))
+                update_window_new_expense(
+                    expenses=expenses, members=members, window=window)
 
                 # switch all checkboxes back to checked
                 for member in members:
                     window[f'-PAYEE-{member.name}-'].update(True)
-
-                # update my balance and total expense balance
-                new_stuff = 'new'
-                window['-MY_BALANCE-'].update(
-                    f'My Balance: ${my_balance(members)}')  # type: ignore
-                window['-TOTAL_EXPENSE_AMOUNT-'].update(
-                    f'Total Expense Amount: ${total_expense_amount(expenses)}')  # type: ignore
 
                 # switch back to main window
                 window['-MAIN_MENU-'].update(visible=True)
@@ -364,6 +385,18 @@ def main():
         elif event == '-EXPENSE_CANCEL_BTN-':
             window['-MAIN_MENU-'].update(visible=True)
             window['-ADD_EXPENSE-'].update(visible=False)
+        elif event == '-EXPENSE_TABLE-':
+            if len(values[event]) != 0:
+                expense_index = values[event][0]
+
+                choice = sg.popup_yes_no(get_expense_popup_text(expenses[expense_index]),
+                                         no_titlebar=True, font=('Helvetica', 13),
+                                         background_color='black', grab_anywhere=True)
+                if choice == 'Yes':
+                    expenses.pop(expense_index)
+
+                    update_window_new_expense(
+                        expenses=expenses, members=members, window=window)
 
     # Close the window
     window.close()

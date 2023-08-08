@@ -72,8 +72,8 @@ def settle_balances_test():
 
         members = distribute_expense(expense=curr_expense, members=members)
         reimbursements = get_reimbursements(members)
-        for r in reimbursements:
-            print(f'{r.debtor} owes {r.creditor} {r.amount}')
+        # for r in reimbursements:
+        #     print(f'{r.debtor} owes {r.creditor} {r.amount}')
 
 
 settle_balances_test()
