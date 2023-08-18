@@ -3,6 +3,7 @@ import PySimpleGUI as sg
 from expense import expense as exp
 from member import member as mem
 from reimbursement import reimbursement as rm
+from expense_group import expense_group as eg
 
 
 def print_members(members):
@@ -91,6 +92,25 @@ def generate_reimbursement_table_rows(reimbursements):
         [f'{r.debtor} owes {r.creditor}', f'$ {r.amount}'] for r in reimbursements
     ]
     return reimburse_list
+
+
+def generate_groups_rows(groups):
+    num_groups = len(groups)
+    final_rows = []
+    all_members_names = []
+
+    for group in groups:
+        member_names = []
+        for member in group.members:
+            member_names.append(member.name)
+        all_members_names.append(', '.join(member_names))
+
+    for i in range(num_groups):
+        final_rows.append(
+            [groups[i].group_name, all_members_names[i]]
+        )
+
+    return final_rows
 
 
 # Returns members array with updated balances
@@ -237,6 +257,36 @@ def update_window_new_expense(expenses, members, window):
         values=generate_expense_table_rows(expenses))
 
 
+# Returns 2 if valid expense, false if invalid
+def verify_expense_info(who_paid, amount_str, expense_name, payees):
+    # use window.update to make it so choices stay in box if a popup occurs
+    # window['-EXPENSE_NAME-'].update(do_not_clear=True)
+    # window['-AMOUNT-'].update(do_not_clear=True)
+
+    # Checks for who paid correct selection
+    if who_paid == None:
+        # Check to make sure a selection was made
+        sg.popup_error('Please select who paid for this expense.')
+        return False
+    elif not is_valid_amount(amount_str):
+        # Checks that amount is actually a number
+        sg.popup_error('Please enter a valid number for the amount.')
+        return False
+    elif len(payees) == 0:
+        sg.popup_error('Please select at least 1 payee.')
+        return False
+
+    new_expense = exp(expense_name=expense_name,
+                      payer=who_paid,
+                      payees=payees,
+                      amount=round(float(amount_str), 2))
+
+    # window['-EXPENSE_NAME-'].update(do_not_clear=False)
+    # window['-AMOUNT-'].update(do_not_clear=False)
+
+    return new_expense
+
+
 def main():
     # expenses = [exp("exp 1", "Nick", ["Nick", "Porter", "Sashwat", "Leif"], 49.60),
     #             exp("exp 2", "Nick", ["Nick", "Sashwat", "Leif"], 32.48),
@@ -252,9 +302,19 @@ def main():
 
     members, expenses = read_info_from_file()
     reimbursements = get_reimbursements(members)
+    groups = [eg(group_name='group name', expenses=expenses, members=members)]
 
     expense_table_header = ['Expense Name', 'Payer', 'Amount']
     reimbursement_table_header = ['Debtor / Creditor', 'Amount']
+    groups_header = ['Group Name', 'Members']
+
+    group_layout = [
+        [sg.Table(headings=groups_header, values=generate_groups_rows(groups),
+                  justification='center', expand_x=True, expand_y=True,
+                  key='-GROUP_TABLE-', auto_size_columns=True,
+                  display_row_numbers=False, row_height=30,
+                  font=('Helvetica', 15), enable_events=True)]
+    ]
 
     right_box_menu = [
         [sg.Button('Add Expense', size=(15, 1.5), font=('Helvetica', 15))],
@@ -322,7 +382,9 @@ def main():
 
     layout = [
         [sg.Text('Group Name', font=('Helvetica', 25), expand_x=True)],
-        [sg.Column(main_menu_layout, key='-MAIN_MENU-', expand_x=True, expand_y=True),
+        [sg.Column(group_layout, expand_x=True, expand_y=True, visible=False, key='-GROUPS-'),
+         sg.Column(main_menu_layout, key='-MAIN_MENU-',
+                   expand_x=True, expand_y=True),
          sg.Column(add_expense_layout, key='-ADD_EXPENSE-', visible=False, expand_x=True, expand_y=True)]
     ]
 
@@ -339,46 +401,33 @@ def main():
             window['-MAIN_MENU-'].update(visible=False)
             window['-ADD_EXPENSE-'].update(visible=True)
         elif event == '-EXPENSE_SUBMIT_BTN-':
+            # get amount in a string
             amount_str = values['-AMOUNT-']
-
             # Get who paid
             who_paid = None
             for member in members:
                 if values[f'-PAYER-RADIO-{member.name}-']:
                     who_paid = member.name
+            # Get payees
+            new_payees_arr = []
+            for member in members:
+                if values[f'-PAYEE-{member.name}-']:
+                    new_payees_arr.append(member.name)
+            # Get expense name
+            expense_name = values['-EXPENSE_NAME-']
+            new_expense = verify_expense_info(who_paid=who_paid,
+                                              amount_str=amount_str,
+                                              expense_name=expense_name,
+                                              payees=new_payees_arr)
 
-            if who_paid == None:
-                # Check to make sure a selection was made
-                sg.popup_error('Please select who paid for this expense.')
-
-            elif not is_valid_amount(amount_str):
-                # Checks that amount is actually a number
-                sg.popup_error('Please enter a valid number for the amount.')
-
-            else:
-                # Get the amount for the expense
-                new_amount = round(float(values['-AMOUNT-']), 2)
-
-                # Get payees
-                new_payees_arr = []
-                for member in members:
-                    if values[f'-PAYEE-{member.name}-']:
-                        new_payees_arr.append(member.name)
-
-                # Make the new expense
-                new_expense = exp(values['-EXPENSE_NAME-'],
-                                  who_paid,
-                                  new_payees_arr,
-                                  new_amount)
+            # if its a valid expense, add it and update
+            if new_expense:
                 expenses = [new_expense] + expenses  # Add to front of array
-
                 update_window_new_expense(
                     expenses=expenses, members=members, window=window)
-
                 # switch all checkboxes back to checked
                 for member in members:
                     window[f'-PAYEE-{member.name}-'].update(True)
-
                 # switch back to main window
                 window['-MAIN_MENU-'].update(visible=True)
                 window['-ADD_EXPENSE-'].update(visible=False)

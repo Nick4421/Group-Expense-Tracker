@@ -20,7 +20,7 @@ expense:
     - list of the payees
 
 TODO
-- Get rid of class and just use variable attributes
 - Implement multiple different groups
-- Be able to delete expenses
-    - Switch from table to listbox to do this
+    - Be able to delete groups too
+- Implement reimbursement payments
+    - click on reimbursement to pay it off
